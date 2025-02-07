@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace HHParser.Configuration
+﻿namespace HHParser.Configuration
 {
-    internal class HHApiSettings
+    public class HHApiSettings
     {
+        public const string SectionName = "HHApiSettings";
+        public string BaseUrl { get; set; } = string.Empty;
     }
 }
