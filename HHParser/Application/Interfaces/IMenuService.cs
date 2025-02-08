@@ -1,4 +1,4 @@
-﻿namespace HHParser.Services.MenuService.Interfaces
+﻿namespace HHParser.Application.Interfaces
 {
     public interface IMenuService
     {

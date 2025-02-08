@@ -1,9 +1,8 @@
-﻿using HHParser.Models;
-using HHParser.Services.HHService.Interfaces;
-using HHParser.Services.MenuService.Interfaces;
-using HHParser.Views;
+﻿using HHParser.Application.Interfaces;
+using HHParser.Domain.Models;
+using HHParser.Presentation.Views;
 
-namespace HHParser.Services.MenuService
+namespace HHParser.Application.Services.MenuService
 {
     public class ConsoleMenuService : IMenuService
     {
@@ -29,7 +28,7 @@ namespace HHParser.Services.MenuService
                         await HandleSpecializationsMenu();
                         break;
                     case "2":
-                        // Другие пункты меню
+                        // Реализуйте другие пункты меню по мере необходимости
                         break;
                     case "0":
                         return;
@@ -48,12 +47,6 @@ namespace HHParser.Services.MenuService
             var inputIds = _view.GetUserInputIds();
             var (selectedGroups, selectedSpecializations) = ProcessUserInput(groups, inputIds);
             _view.ShowSelectionResults(selectedGroups, selectedSpecializations);
-        }
-
-        private async Task HandleProfessionalRolesMenu()
-        {
-            var profRolesGroup = await _hhService.GetProfessionalRolesGroupsAsync();
-
         }
 
         private (List<string>, List<string>) ProcessUserInput(List<SpecializationGroup> groups, HashSet<string> inputIds)
