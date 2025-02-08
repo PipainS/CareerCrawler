@@ -11,11 +11,15 @@ namespace HHParser.Services.HHService
         private readonly HttpClient _client;
 
         public string ApiUrl { get; private set; }
+
+        public string ProfAreaApiUrl { get; private set; }
+
         public HHApiService(HttpClient client, IConfiguration configuration)
         {
             _client = client;
 
             ApiUrl = configuration.GetSection(HHApiSettings.SectionName)["BaseUrl"] + "/specializations";
+            ProfAreaApiUrl = configuration.GetSection(HHApiSettings.SectionName)["BaseUrl"] + "/professional_roles";
 
         }
 
@@ -29,7 +33,22 @@ namespace HHParser.Services.HHService
             }
             catch (Exception ex)
             {
-                throw new ApplicationException("Ошибка при получении данных с API", ex);
+                throw new ApplicationException("Ошибка при получении данных с API",
+                                               ex);
+            }
+        }
+
+        public async Task<List<ProfessionalRolesGroup>> GetProfessionalRolesGroupsAsync()
+        {
+            try
+            {
+                var response = await _client.GetStringAsync(ProfAreaApiUrl);
+                return JsonConvert.DeserializeObject<List<ProfessionalRolesGroup>>(response) ?? [];
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException("Ошибка при получении данных с API",
+                                               ex);
             }
         }
     }

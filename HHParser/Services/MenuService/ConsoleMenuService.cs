@@ -50,6 +50,12 @@ namespace HHParser.Services.MenuService
             _view.ShowSelectionResults(selectedGroups, selectedSpecializations);
         }
 
+        private async Task HandleProfessionalRolesMenu()
+        {
+            var profRolesGroup = await _hhService.GetProfessionalRolesGroupsAsync();
+
+        }
+
         private (List<string>, List<string>) ProcessUserInput(List<SpecializationGroup> groups, HashSet<string> inputIds)
         {
             var selectedGroups = new List<string>();
