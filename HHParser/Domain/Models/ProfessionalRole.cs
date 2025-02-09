@@ -1,4 +1,4 @@
-﻿namespace HHParser.Models
+﻿namespace HHParser.Domain.Models
 {
     public class ProfessionalRole
     {
