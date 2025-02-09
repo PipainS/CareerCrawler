@@ -2,6 +2,6 @@
 {
     public interface IMenuService
     {
-        Task ShowMainMenuAsync();
+        Task ShowMainMenuAsync(CancellationToken cancellationToken = default);
     }
 }

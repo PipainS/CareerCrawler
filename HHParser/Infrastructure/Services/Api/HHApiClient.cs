@@ -3,8 +3,11 @@ using HHParser.Application.Interfaces;
 using HHParser.Infrastructure.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
+using System.Net.Http.Json;
 using HHParser.Infrastructure.Services.Ex;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace HHParser.Infrastructure.Services.Api
 {
@@ -26,7 +29,7 @@ namespace HHParser.Infrastructure.Services.Api
             if (string.IsNullOrWhiteSpace(settings.BaseUrl))
             {
                 _logger.LogError("BaseUrl не задан в настройках HHApiSettings.");
-                throw new ArgumentException("Не задан BaseUrl в настройках HHApiSettings.");
+                throw new System.ArgumentException("Не задан BaseUrl в настройках HHApiSettings.");
             }
 
             _specializationsUrl = $"{settings.BaseUrl}/specializations";
@@ -38,20 +41,15 @@ namespace HHParser.Infrastructure.Services.Api
             try
             {
                 _logger.LogInformation("Получение специализаций с URL: {Url}", _specializationsUrl);
-                using var response = await _client.GetAsync(_specializationsUrl, cancellationToken);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    _logger.LogError("Ошибка при запросе специализаций: {StatusCode}", response.StatusCode);
-                    throw new ApiRequestException($"Ошибка при получении специализаций: {response.StatusCode}");
-                }
-
-                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                var result = await JsonSerializer.DeserializeAsync<List<SpecializationGroup>>(stream, cancellationToken: cancellationToken);
-
+                var result = await _client.GetFromJsonAsync<List<SpecializationGroup>>(_specializationsUrl, cancellationToken);
                 return result ?? new List<SpecializationGroup>();
             }
-            catch (Exception ex)
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Ошибка HTTP при запросе специализаций: {Url}", _specializationsUrl);
+                throw new ApiRequestException("Ошибка при получении специализаций.", ex);
+            }
+            catch (System.Exception ex)
             {
                 _logger.LogError(ex, "Ошибка при получении специализаций.");
                 throw new ApiRequestException("Ошибка при получении данных с API специализаций.", ex);
@@ -63,20 +61,15 @@ namespace HHParser.Infrastructure.Services.Api
             try
             {
                 _logger.LogInformation("Получение ролей с URL: {Url}", _professionalRolesUrl);
-                using var response = await _client.GetAsync(_professionalRolesUrl, cancellationToken);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    _logger.LogError("Ошибка при запросе профессиональных ролей: {StatusCode}", response.StatusCode);
-                    throw new ApiRequestException($"Ошибка при получении профессиональных ролей: {response.StatusCode}");
-                }
-
-                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                var result = await JsonSerializer.DeserializeAsync<List<ProfessionalRolesGroup>>(stream, cancellationToken: cancellationToken);
-
+                var result = await _client.GetFromJsonAsync<List<ProfessionalRolesGroup>>(_professionalRolesUrl, cancellationToken);
                 return result ?? new List<ProfessionalRolesGroup>();
             }
-            catch (Exception ex)
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Ошибка HTTP при запросе профессиональных ролей: {Url}", _professionalRolesUrl);
+                throw new ApiRequestException("Ошибка при получении профессиональных ролей.", ex);
+            }
+            catch (System.Exception ex)
             {
                 _logger.LogError(ex, "Ошибка при получении профессиональных ролей.");
                 throw new ApiRequestException("Ошибка при получении данных с API проф. ролей.", ex);

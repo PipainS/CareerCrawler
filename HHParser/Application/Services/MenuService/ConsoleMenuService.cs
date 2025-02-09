@@ -1,74 +1,66 @@
 ﻿using HHParser.Application.Interfaces;
-using HHParser.Domain.Models;
+using HHParser.Domain.Enums;
 using HHParser.Presentation.Views;
+using Microsoft.Extensions.Logging;
 
 namespace HHParser.Application.Services.MenuService
 {
     public class ConsoleMenuService : IMenuService
     {
-        private readonly IHHService _hhService;
         private readonly ConsoleView _view;
+        private readonly IEnumerable<IMenuCommand> _commands;
+        private readonly ILogger<ConsoleMenuService> _logger;
 
-        public ConsoleMenuService(IHHService hhService, ConsoleView view)
+        public ConsoleMenuService(ConsoleView view, IEnumerable<IMenuCommand> commands, ILogger<ConsoleMenuService> logger)
         {
-            _hhService = hhService;
             _view = view;
+            _commands = commands;
+            _logger = logger;
         }
 
-        public async Task ShowMainMenuAsync()
+        public async Task ShowMainMenuAsync(CancellationToken cancellationToken = default)
         {
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 _view.ShowMainMenu();
                 var choice = Console.ReadLine();
 
-                switch (choice)
+                if (!int.TryParse(choice, out int optionValue) ||
+                    !Enum.IsDefined(typeof(MainMenuOption), optionValue))
                 {
-                    case "1":
-                        await HandleSpecializationsMenu();
-                        break;
-                    case "2":
-                        // Реализуйте другие пункты меню по мере необходимости
-                        break;
-                    case "0":
-                        return;
-                    default:
-                        _view.ShowError("Некорректный выбор");
-                        break;
+                    _view.ShowError("Некорректный выбор");
+                    continue;
+                }
+
+                var menuOption = (MainMenuOption)optionValue;
+
+                if (menuOption == MainMenuOption.Exit)
+                {
+                    _logger.LogInformation("Пользователь выбрал выход.");
+                    return;
+                }
+
+                var command = GetCommand(menuOption);
+                if (command != null)
+                {
+                    _logger.LogInformation("Выполнение команды для опции {Option}.", menuOption);
+                    await command.ExecuteAsync(cancellationToken);
+                }
+                else
+                {
+                    _view.ShowError("Выбранная функция не реализована.");
                 }
             }
         }
 
-        private async Task HandleSpecializationsMenu()
+        private IMenuCommand GetCommand(MainMenuOption option)
         {
-            var groups = await _hhService.GetSpecializationGroupsAsync();
-            _view.ShowSpecializations(groups);
-
-            var inputIds = _view.GetUserInputIds();
-            var (selectedGroups, selectedSpecializations) = ProcessUserInput(groups, inputIds);
-            _view.ShowSelectionResults(selectedGroups, selectedSpecializations);
-        }
-
-        private (List<string>, List<string>) ProcessUserInput(List<SpecializationGroup> groups, HashSet<string> inputIds)
-        {
-            var selectedGroups = new List<string>();
-            var selectedSpecializations = new List<string>();
-
-            foreach (var group in groups)
+            foreach (var cmd in _commands)
             {
-                if (inputIds.Contains(group.Id))
-                {
-                    selectedGroups.Add(group.Name);
-                }
-
-                var matchingSpecs = group.Specializations?
-                    .Where(spec => inputIds.Contains(spec.Id))
-                    .Select(spec => spec.Name) ?? Enumerable.Empty<string>();
-
-                selectedSpecializations.AddRange(matchingSpecs);
+                if (cmd.Option == option)
+                    return cmd;
             }
-
-            return (selectedGroups, selectedSpecializations);
+            return null;
         }
     }
 }

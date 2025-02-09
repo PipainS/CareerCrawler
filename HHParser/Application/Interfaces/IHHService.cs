@@ -1,5 +1,4 @@
-﻿using System.Threading;
-using HHParser.Domain.Models;
+﻿using HHParser.Domain.Models;
 
 namespace HHParser.Application.Interfaces
 {

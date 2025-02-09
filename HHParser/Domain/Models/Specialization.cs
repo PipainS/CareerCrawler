@@ -6,6 +6,6 @@
 
         public required string Name { get; set; }
 
-        public string? Laboring { get; set; }
+        public bool? Laboring { get; set; }
     }
 }

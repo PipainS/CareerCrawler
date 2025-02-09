@@ -1,4 +1,6 @@
-﻿using HHParser.Domain.Models;
+﻿using HHParser.Common.Extensions;
+using HHParser.Domain.Enums;
+using HHParser.Domain.Models;
 
 namespace HHParser.Presentation.Views
 {
@@ -8,9 +10,13 @@ namespace HHParser.Presentation.Views
         {
             Console.Clear();
             Console.WriteLine("Главное меню:");
-            Console.WriteLine("1. Просмотр специализаций");
-            Console.WriteLine("2. Поиск вакансий");
-            Console.WriteLine("0. Выход");
+
+            // Получаем все значения перечисления, кроме тех, которые не нужно выводить (если требуется)
+            foreach (MainMenuOption option in Enum.GetValues(typeof(MainMenuOption)))
+            {
+                Console.WriteLine($"{(int)option}. {option.GetDisplayName()}");
+            }
+
             Console.Write("Выберите пункт меню: ");
         }
 
@@ -24,38 +30,6 @@ namespace HHParser.Presentation.Views
                 {
                     Console.WriteLine($"   Специализация: {spec.Name} (ID: {spec.Id})");
                 }
-            }
-        }
-
-        public HashSet<string> GetUserInputIds()
-        {
-            Console.WriteLine("\nВведите ID групп и/или специализаций через запятую:");
-            var input = Console.ReadLine() ?? string.Empty;
-
-            return input.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(id => id.Trim())
-                .ToHashSet();
-        }
-
-        public void ShowSelectionResults(List<string> groups, List<string> specs)
-        {
-            Console.WriteLine("\nВаш выбор:");
-
-            if (groups.Any())
-            {
-                Console.WriteLine("Группы:");
-                groups.ForEach(g => Console.WriteLine($"- {g}"));
-            }
-
-            if (specs.Any())
-            {
-                Console.WriteLine("Специализации:");
-                specs.ForEach(s => Console.WriteLine($"- {s}"));
-            }
-
-            if (!groups.Any() && !specs.Any())
-            {
-                Console.WriteLine("Ничего не найдено по введенным ID.");
             }
 
             Console.WriteLine("\nНажмите любую клавишу для продолжения...");
