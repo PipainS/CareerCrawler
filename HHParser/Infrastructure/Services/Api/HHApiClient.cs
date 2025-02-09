@@ -2,8 +2,9 @@
 using HHParser.Application.Interfaces;
 using HHParser.Infrastructure.Configuration;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
+using HHParser.Infrastructure.Services.Ex;
 
 namespace HHParser.Infrastructure.Services.Api
 {
@@ -32,37 +33,54 @@ namespace HHParser.Infrastructure.Services.Api
             _professionalRolesUrl = $"{settings.BaseUrl}/professional_roles";
         }
 
-        public async Task<List<SpecializationGroup>> GetSpecializationGroupsAsync()
+        public async Task<List<SpecializationGroup>> GetSpecializationGroupsAsync(CancellationToken cancellationToken = default)
         {
             try
             {
                 _logger.LogInformation("Получение специализаций с URL: {Url}", _specializationsUrl);
-                var response = await _client.GetStringAsync(_specializationsUrl);
-                var result = JsonConvert.DeserializeObject<List<SpecializationGroup>>(response);
+                using var response = await _client.GetAsync(_specializationsUrl, cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Ошибка при запросе специализаций: {StatusCode}", response.StatusCode);
+                    throw new ApiRequestException($"Ошибка при получении специализаций: {response.StatusCode}");
+                }
+
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                var result = await JsonSerializer.DeserializeAsync<List<SpecializationGroup>>(stream, cancellationToken: cancellationToken);
+
                 return result ?? new List<SpecializationGroup>();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ошибка при получении специализаций.");
-                throw new ApplicationException("Ошибка при получении данных с API специализаций.", ex);
+                throw new ApiRequestException("Ошибка при получении данных с API специализаций.", ex);
             }
         }
 
-        public async Task<List<ProfessionalRolesGroup>> GetProfessionalRolesGroupsAsync()
+        public async Task<List<ProfessionalRolesGroup>> GetProfessionalRolesGroupsAsync(CancellationToken cancellationToken = default)
         {
             try
             {
-                _logger.LogInformation("Получение ролей с URL: {Url}", _specializationsUrl);
-                var response = await _client.GetStringAsync(_professionalRolesUrl);
-                var result = JsonConvert.DeserializeObject<List<ProfessionalRolesGroup>>(response);
+                _logger.LogInformation("Получение ролей с URL: {Url}", _professionalRolesUrl);
+                using var response = await _client.GetAsync(_professionalRolesUrl, cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Ошибка при запросе профессиональных ролей: {StatusCode}", response.StatusCode);
+                    throw new ApiRequestException($"Ошибка при получении профессиональных ролей: {response.StatusCode}");
+                }
+
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                var result = await JsonSerializer.DeserializeAsync<List<ProfessionalRolesGroup>>(stream, cancellationToken: cancellationToken);
+
                 return result ?? new List<ProfessionalRolesGroup>();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ошибка при получении профессиональных ролей.");
-                throw new ApplicationException("Ошибка при получении данных с API проф. ролей.", ex);
+                throw new ApiRequestException("Ошибка при получении данных с API проф. ролей.", ex);
             }
-
         }
     }
 }

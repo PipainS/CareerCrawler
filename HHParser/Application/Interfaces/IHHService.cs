@@ -1,10 +1,11 @@
-﻿using HHParser.Domain.Models;
+﻿using System.Threading;
+using HHParser.Domain.Models;
 
 namespace HHParser.Application.Interfaces
 {
     public interface IHHService
     {
-        Task<List<SpecializationGroup>> GetSpecializationGroupsAsync();
-        Task<List<ProfessionalRolesGroup>> GetProfessionalRolesGroupsAsync();
+        Task<List<SpecializationGroup>> GetSpecializationGroupsAsync(CancellationToken cancellationToken = default);
+        Task<List<ProfessionalRolesGroup>> GetProfessionalRolesGroupsAsync(CancellationToken cancellationToken = default);
     }
 }
