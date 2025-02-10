@@ -28,6 +28,7 @@ namespace HHParser.Infrastructure.Services.Api
             _client = client;
             _logger = logger;
             _cache = cache;
+
             var settings = options.Value;
 
             if (string.IsNullOrWhiteSpace(settings.BaseUrl))

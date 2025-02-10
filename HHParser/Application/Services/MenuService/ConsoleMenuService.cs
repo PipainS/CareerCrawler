@@ -7,11 +7,11 @@ namespace HHParser.Application.Services.MenuService
 {
     public class ConsoleMenuService : IMenuService
     {
-        private readonly ConsoleView _view;
+        private readonly IConsoleView _view;
         private readonly IEnumerable<IMenuCommand> _commands;
         private readonly ILogger<ConsoleMenuService> _logger;
 
-        public ConsoleMenuService(ConsoleView view, IEnumerable<IMenuCommand> commands, ILogger<ConsoleMenuService> logger)
+        public ConsoleMenuService(IConsoleView view, IEnumerable<IMenuCommand> commands, ILogger<ConsoleMenuService> logger)
         {
             _view = view;
             _commands = commands;

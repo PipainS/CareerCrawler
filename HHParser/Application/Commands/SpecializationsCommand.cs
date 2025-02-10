@@ -11,9 +11,9 @@ namespace HHParser.Application.Commands
         public MainMenuOption Option => MainMenuOption.Specializations;
 
         private readonly IHHService _hhService;
-        private readonly ConsoleView _view;
+        private readonly IConsoleView _view;
 
-        public SpecializationsCommand(IHHService hhService, ConsoleView view)
+        public SpecializationsCommand(IHHService hhService, IConsoleView view)
         {
             _hhService = hhService;
             _view = view;

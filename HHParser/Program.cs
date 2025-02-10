@@ -44,7 +44,7 @@ services.Configure<HHApiSettings>(configuration.GetSection(ConfigurationKeys.HHA
 //
 // Регистрируем Presentation-слой
 //
-services.AddSingleton<ConsoleView>();
+services.AddSingleton<IConsoleView, ConsoleView>();
 
 //
 // Автоматизированная регистрация команд меню
@@ -82,7 +82,7 @@ catch (Exception ex)
 {
     // Критическая ошибка – логируем с помощью Serilog
     Log.Fatal(ex, "Критическая ошибка в приложении.");
-    var view = serviceProvider.GetRequiredService<ConsoleView>();
+    var view = serviceProvider.GetRequiredService<IConsoleView>();
     view.ShowError($"Критическая ошибка: {ex.Message}");
 }
 finally

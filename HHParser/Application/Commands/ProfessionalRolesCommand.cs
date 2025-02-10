@@ -17,9 +17,9 @@ namespace HHParser.Application.Commands
 
 
         private readonly ILogger<ProfessionalRolesCommand> _logger;
-        private readonly ConsoleView _consoleView;
+        private readonly IConsoleView _consoleView;
         private readonly IHHService _service;
-        public ProfessionalRolesCommand(ILogger<ProfessionalRolesCommand> logger, ConsoleView consoleView, IHHService service)
+        public ProfessionalRolesCommand(ILogger<ProfessionalRolesCommand> logger, IConsoleView consoleView, IHHService service)
         {
             _logger = logger;
             _consoleView = consoleView;
