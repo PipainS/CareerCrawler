@@ -5,7 +5,7 @@ namespace HHParser.Application.Interfaces
     /// <summary>
     /// Defines a service for interacting with the hh.ru API to retrieve job-related data.
     /// </summary>
-    public interface IHHService
+    public interface IHeadHunterApiClient
     {
         /// <summary>
         /// Retrieves a list of specialization groups from the hh.ru API.

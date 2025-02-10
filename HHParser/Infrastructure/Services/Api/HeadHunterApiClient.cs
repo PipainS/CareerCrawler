@@ -15,11 +15,11 @@ namespace HHParser.Infrastructure.Services.Api
     /// Handles communication with the HH.ru API, including retrieving data such as specialization groups and professional roles.
     /// Caches the results to improve performance by reducing the number of API requests.
     /// </summary>
-    public class HHApiClient : IHHService
+    public class HeadHunterApiClient : IHeadHunterApiClient
     {
         #region DI fields
         private readonly HttpClient _client;
-        private readonly ILogger<HHApiClient> _logger;
+        private readonly ILogger<HeadHunterApiClient> _logger;
         private readonly IMemoryCache _cache;
         #endregion
 
@@ -35,9 +35,9 @@ namespace HHParser.Infrastructure.Services.Api
         /// <param name="options">Settings for the HH API, including the base URL and paths for specializations and professional roles.</param>
         /// <param name="logger">Logger for logging API-related activities and errors.</param>
         /// <param name="cache">In-memory cache used to store API responses to avoid redundant requests.</param>
-        public HHApiClient(HttpClient client,
+        public HeadHunterApiClient(HttpClient client,
             IOptions<HHApiSettings> options,
-            ILogger<HHApiClient> logger,
+            ILogger<HeadHunterApiClient> logger,
             IMemoryCache cache)
         {
             _client = client;
@@ -209,7 +209,7 @@ namespace HHParser.Infrastructure.Services.Api
                 }
 
                 var result = await response.Content.ReadFromJsonAsync<List<T>>(cancellationToken: cancellationToken).ConfigureAwait(false);
-                return result ?? new List<T>();
+                return result ?? [];
             }
             catch (HttpRequestException ex)
             {

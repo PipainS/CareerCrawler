@@ -53,7 +53,7 @@ services.Scan(scan => scan
 services.AddSingleton<IMenuService, ConsoleMenuService>();
 
 // Registering Infrastructure layer (working with the API)
-services.AddHttpClient<IHHService, HHApiClient>();
+services.AddHttpClient<IHeadHunterApiClient, HeadHunterApiClient>();
 
 // Registering IConfiguration for use in other places if needed
 services.AddSingleton<IConfiguration>(configuration);

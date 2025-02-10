@@ -14,7 +14,7 @@ namespace HHParser.Application.Commands
         /// </summary>
         public MainMenuOption Option => MainMenuOption.Specializations;
 
-        private readonly IHHService _hhService;
+        private readonly IHeadHunterApiClient _hhService;
         private readonly IConsoleView _view;
 
         /// <summary>
@@ -22,7 +22,7 @@ namespace HHParser.Application.Commands
         /// </summary>
         /// <param name="hhService">The service used to retrieve specialization groups from the hh.ru API.</param>
         /// <param name="view">The console view used to display specialization groups and error messages.</param>
-        public SpecializationsCommand(IHHService hhService, IConsoleView view)
+        public SpecializationsCommand(IHeadHunterApiClient hhService, IConsoleView view)
         {
             _hhService = hhService;
             _view = view;

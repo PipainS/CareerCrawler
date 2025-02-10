@@ -16,7 +16,7 @@ namespace HHParser.Application.Commands
         public MainMenuOption Option => MainMenuOption.ProfessionalRolesSearch;
 
         private readonly IConsoleView _consoleView;
-        private readonly IHHService _service;
+        private readonly IHeadHunterApiClient _service;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProfessionalRolesCommand"/> class.
@@ -24,7 +24,7 @@ namespace HHParser.Application.Commands
         /// <param name="logger">The logger used to record command execution details and errors.</param>
         /// <param name="consoleView">The console view used to display professional roles and error messages.</param>
         /// <param name="service">The service used to retrieve professional roles categories from the hh.ru API.</param>
-        public ProfessionalRolesCommand(ILogger<ProfessionalRolesCommand> logger, IConsoleView consoleView, IHHService service)
+        public ProfessionalRolesCommand(IConsoleView consoleView, IHeadHunterApiClient service)
         {
             _consoleView = consoleView;
             _service = service;
