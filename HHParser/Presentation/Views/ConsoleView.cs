@@ -1,61 +1,79 @@
-﻿using HHParser.Common.Extensions;
+﻿using HHParser.Application.Interfaces;
+using HHParser.Common.Extensions;
 using HHParser.Domain.Enums;
 using HHParser.Domain.Models;
 
 namespace HHParser.Presentation.Views
 {
+    /// <summary>
+    /// Represents the console view that handles displaying different types of information to the user.
+    /// </summary>
     public class ConsoleView : IConsoleView
     {
+        /// <summary>
+        /// Displays the main menu with options.
+        /// </summary>
         public void ShowMainMenu()
         {
             Console.Clear();
-            Console.WriteLine("Главное меню:");
+            Console.WriteLine("Main Menu:");
 
-            // Получаем все значения перечисления, кроме тех, которые не нужно выводить (если требуется)
             foreach (MainMenuOption option in Enum.GetValues(typeof(MainMenuOption)))
             {
                 Console.WriteLine($"{(int)option}. {option.GetDisplayName()}");
             }
 
-            Console.Write("Выберите пункт меню: ");
+            Console.Write("Select a menu option: ");
         }
 
+        /// <summary>
+        /// Displays a list of specialization groups along with their specialization IDs.
+        /// </summary>
+        /// <param name="groups">A list of specialization groups to display.</param>
         public void ShowSpecializations(List<SpecializationGroup> groups)
         {
-            Console.WriteLine("\nСписок групп и специализаций с их ID:\n");
+            Console.WriteLine("\nList of groups and specializations with their IDs:\n");
             foreach (var group in groups)
             {
-                Console.WriteLine($"Группа (ID): {group.Id} Название: {group.Name}");
-                foreach (var spec in group.Specializations ?? new List<Specialization>())
+                Console.WriteLine($"Group (ID): {group.Id} Name: {group.Name}");
+                foreach (var spec in group.Specializations ?? [])
                 {
-                    Console.WriteLine($"   Специализация: {spec.Name} (ID: {spec.Id})");
+                    Console.WriteLine($"   Specialization: {spec.Name} (ID: {spec.Id})");
                 }
             }
 
-            Console.WriteLine("\nНажмите любую клавишу для продолжения...");
+            Console.WriteLine("\nPress any key to continue...");
             Console.ReadKey();
         }
 
+        /// <summary>
+        /// Displays a list of professional roles along with their category IDs.
+        /// </summary>
+        /// <param name="categories">A list of professional roles categories to display.</param>
         public void ShowProfessionalRoles(List<ProfessionalRolesCategory> categories)
         {
-            Console.WriteLine("\nСписок профессиональных ролей:\n");
+            Console.WriteLine("\nList of professional roles:\n");
             foreach (var category in categories)
             {
-                Console.WriteLine($"Категория (ID): {category.Id} Название: {category.Name}");
-                foreach (var role in category.Roles ?? new List<ProfessionalRole>())
+                Console.WriteLine($"Category (ID): {category.Id} Name: {category.Name}");
+                foreach (var role in category.Roles ?? [])
                 {
-                    Console.WriteLine($"   Роль: {role.Name} (ID: {role.Id})");
+                    Console.WriteLine($"   Role: {role.Name} (ID: {role.Id})");
                 }
             }
 
-            Console.WriteLine("\nНажмите любую клавишу для продолжения...");
+            Console.WriteLine("\nPress any key to continue...");
             Console.ReadKey();
         }
 
+        /// <summary>
+        /// Displays an error message to the user in red.
+        /// </summary>
+        /// <param name="message">The error message to display.</param>
         public void ShowError(string message)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"Ошибка: {message}");
+            Console.WriteLine($"Error: {message}");
             Console.ResetColor();
             Console.ReadKey();
         }

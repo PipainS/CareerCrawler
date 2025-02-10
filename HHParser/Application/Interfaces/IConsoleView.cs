@@ -1,34 +1,35 @@
 ﻿using HHParser.Domain.Models;
-using HHParser.Domain.Enums;
 
-namespace HHParser.Presentation.Views
+namespace HHParser.Application.Interfaces
 {
     /// <summary>
-    /// Интерфейс для представления пользовательского интерфейса.
+    /// Represents a console view for interacting with the user.
+    /// Provides methods for displaying menus, lists of specialization groups and professional roles,
+    /// as well as error messages.
     /// </summary>
     public interface IConsoleView
     {
         /// <summary>
-        /// Вывод главного меню.
+        /// Displays the main menu to the user.
         /// </summary>
         void ShowMainMenu();
 
         /// <summary>
-        /// Вывод списка групп и специализаций.
+        /// Displays a list of specialization groups.
         /// </summary>
-        /// <param name="groups">Список групп специализаций.</param>
+        /// <param name="groups">A list of specialization groups to be displayed.</param>
         void ShowSpecializations(List<SpecializationGroup> groups);
 
         /// <summary>
-        /// Вывод списка профессиональных ролей.
+        /// Displays a list of professional roles categories.
         /// </summary>
-        /// <param name="categories">Список категорий профессиональных ролей.</param>
+        /// <param name="categories">A list of professional roles categories to be displayed.</param>
         void ShowProfessionalRoles(List<ProfessionalRolesCategory> categories);
 
         /// <summary>
-        /// Вывод сообщения об ошибке.
+        /// Displays an error message to the user.
         /// </summary>
-        /// <param name="message">Текст сообщения об ошибке.</param>
+        /// <param name="message">The text of the error message.</param>
         void ShowError(string message);
     }
 }

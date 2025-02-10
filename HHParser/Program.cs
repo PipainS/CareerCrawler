@@ -9,26 +9,25 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 
-//
-// Загрузка конфигурации
-//
+#region Configuration Loading
+// Loading the configuration
 var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json")
     .Build();
+#endregion
 
-//
-// Настройка Serilog, считывая параметры из конфигурации
-//
+#region Serilog Setup
+// Setting up Serilog, reading parameters from the configuration
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(configuration)
     .CreateLogger();
+#endregion
 
+#region Service Registration
 var services = new ServiceCollection();
 
-//
-// Регистрируем логирование: очищаем провайдеры и добавляем Serilog
-//
+// Registering logging: clearing existing providers and adding Serilog
 services.AddLogging(loggingBuilder =>
 {
     loggingBuilder.ClearProviders();
@@ -37,41 +36,34 @@ services.AddLogging(loggingBuilder =>
 
 services.AddMemoryCache();
 
-//
-// Регистрируем настройки HH API через Options pattern
+// Registering HH API settings using Options pattern
 services.Configure<HHApiSettings>(configuration.GetSection(ConfigurationKeys.HHApiSettingsSection));
 
-//
-// Регистрируем Presentation-слой
-//
+// Registering Presentation layer
 services.AddSingleton<IConsoleView, ConsoleView>();
 
-//
-// Автоматизированная регистрация команд меню
-//
+// Automated registration of menu commands
 services.Scan(scan => scan
     .FromAssemblyOf<IMenuCommand>()
     .AddClasses(classes => classes.AssignableTo<IMenuCommand>())
     .AsImplementedInterfaces()
     .WithSingletonLifetime());
 
-//
-// Регистрируем Application-слой
-//
+// Registering Application layer
 services.AddSingleton<IMenuService, ConsoleMenuService>();
 
-//
-// Регистрируем Infrastructure-слой (работа с API)
-//
+// Registering Infrastructure layer (working with the API)
 services.AddHttpClient<IHHService, HHApiClient>();
 
-//
-// Регистрируем IConfiguration, если потребуется в других местах
-//
+// Registering IConfiguration for use in other places if needed
 services.AddSingleton<IConfiguration>(configuration);
+#endregion
 
+#region Building Service Provider
 var serviceProvider = services.BuildServiceProvider();
+#endregion
 
+#region Main Program Execution
 try
 {
     var menuService = serviceProvider.GetRequiredService<IMenuService>();
@@ -80,12 +72,12 @@ try
 }
 catch (Exception ex)
 {
-    // Критическая ошибка – логируем с помощью Serilog
-    Log.Fatal(ex, "Критическая ошибка в приложении.");
+    Log.Fatal(ex, "Critical error in the application.");
     var view = serviceProvider.GetRequiredService<IConsoleView>();
-    view.ShowError($"Критическая ошибка: {ex.Message}");
+    view.ShowError($"Critical error: {ex.Message}");
 }
 finally
 {
     Log.CloseAndFlush();
 }
+#endregion
