@@ -1,8 +1,8 @@
 ﻿using HHParser.Application.Interfaces;
 using HHParser.Application.Services.MenuService;
 using HHParser.Infrastructure.Configuration;
+using HHParser.Infrastructure.Configuration.Constants;
 using HHParser.Infrastructure.Services.Api;
-using HHParser.Application.Commands;
 using HHParser.Presentation.Views;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,10 +35,11 @@ services.AddLogging(loggingBuilder =>
     loggingBuilder.AddSerilog();
 });
 
+services.AddMemoryCache();
+
 //
 // Регистрируем настройки HH API через Options pattern
-// TO DO: Перенести "HHApiSettings" в класс с константами
-services.Configure<HHApiSettings>(configuration.GetSection("HHApiSettings"));
+services.Configure<HHApiSettings>(configuration.GetSection(ConfigurationKeys.HHApiSettingsSection));
 
 //
 // Регистрируем Presentation-слой
@@ -46,11 +47,13 @@ services.Configure<HHApiSettings>(configuration.GetSection("HHApiSettings"));
 services.AddSingleton<ConsoleView>();
 
 //
-// Регистрируем команды меню (расширяемость функционала)
+// Автоматизированная регистрация команд меню
 //
-services.AddSingleton<IMenuCommand, SpecializationsCommand>();
-// При необходимости можно добавить и другие команды:
-// services.AddSingleton<IMenuCommand, VacancySearchCommand>();
+services.Scan(scan => scan
+    .FromAssemblyOf<IMenuCommand>()
+    .AddClasses(classes => classes.AssignableTo<IMenuCommand>())
+    .AsImplementedInterfaces()
+    .WithSingletonLifetime());
 
 //
 // Регистрируем Application-слой

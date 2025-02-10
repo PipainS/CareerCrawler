@@ -14,7 +14,7 @@ namespace HHParser.Common.Extensions
                 var displayAttribute = memberInfo[0].GetCustomAttribute<DisplayAttribute>();
                 if (displayAttribute != null)
                 {
-                    return displayAttribute.GetName();
+                    return displayAttribute.GetName() ?? enumValue.ToString();
                 }
             }
             return enumValue.ToString();

@@ -26,10 +26,6 @@ namespace HHParser.Application.Commands
                 // Получаем специализации с учётом cancellationToken
                 var groups = await _hhService.GetSpecializationGroupsAsync(cancellationToken);
                 _view.ShowSpecializations(groups);
-
-                //var inputIds = _view.GetUserInputIds();
-                //var (selectedGroups, selectedSpecializations) = ProcessUserInput(groups, inputIds);
-                //_view.ShowSelectionResults(selectedGroups, selectedSpecializations);
             }
             catch (ApiRequestException ex)
             {
@@ -39,28 +35,6 @@ namespace HHParser.Application.Commands
             {
                 _view.ShowError($"Неожиданная ошибка: {ex.Message}");
             }
-        }
-
-        private (List<string>, List<string>) ProcessUserInput(List<SpecializationGroup> groups, HashSet<string> inputIds)
-        {
-            var selectedGroups = new List<string>();
-            var selectedSpecializations = new List<string>();
-
-            foreach (var group in groups)
-            {
-                if (inputIds.Contains(group.Id))
-                {
-                    selectedGroups.Add(group.Name);
-                }
-
-                var matchingSpecs = group.Specializations?
-                    .Where(spec => inputIds.Contains(spec.Id))
-                    .Select(spec => spec.Name) ?? Enumerable.Empty<string>();
-
-                selectedSpecializations.AddRange(matchingSpecs);
-            }
-
-            return (selectedGroups, selectedSpecializations);
         }
     }
 }

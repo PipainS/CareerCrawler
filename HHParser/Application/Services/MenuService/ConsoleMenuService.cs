@@ -41,7 +41,7 @@ namespace HHParser.Application.Services.MenuService
                 }
 
                 var command = GetCommand(menuOption);
-                if (command != null)
+                if (command is not null)
                 {
                     _logger.LogInformation("Выполнение команды для опции {Option}.", menuOption);
                     await command.ExecuteAsync(cancellationToken);
@@ -53,7 +53,7 @@ namespace HHParser.Application.Services.MenuService
             }
         }
 
-        private IMenuCommand GetCommand(MainMenuOption option)
+        private IMenuCommand? GetCommand(MainMenuOption option)
         {
             foreach (var cmd in _commands)
             {
