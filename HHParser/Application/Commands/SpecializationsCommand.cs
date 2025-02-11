@@ -1,66 +1,55 @@
 ﻿using HHParser.Application.Interfaces;
-using HHParser.Domain.Models;
-using HHParser.Presentation.Views;
 using HHParser.Domain.Enums;
 using HHParser.Infrastructure.Services.Ex;
 
 namespace HHParser.Application.Commands
 {
+    /// <summary>
+    /// Command responsible for fetching and displaying specialization groups from the hh.ru API.
+    /// </summary>
     public class SpecializationsCommand : IMenuCommand
     {
+        /// <summary>
+        /// Gets the menu option associated with this command.
+        /// </summary>
         public MainMenuOption Option => MainMenuOption.Specializations;
 
-        private readonly IHHService _hhService;
-        private readonly ConsoleView _view;
+        private readonly IHeadHunterApiClient _hhService;
+        private readonly IConsoleView _view;
 
-        public SpecializationsCommand(IHHService hhService, ConsoleView view)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SpecializationsCommand"/> class.
+        /// </summary>
+        /// <param name="hhService">The service used to retrieve specialization groups from the hh.ru API.</param>
+        /// <param name="view">The console view used to display specialization groups and error messages.</param>
+        public SpecializationsCommand(IHeadHunterApiClient hhService, IConsoleView view)
         {
             _hhService = hhService;
             _view = view;
         }
 
+        /// <summary>
+        /// Executes the command to retrieve specialization groups and display them using the console view.
+        /// </summary>
+        /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <exception cref="ApiRequestException">Thrown when the API call fails.</exception>
         public async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             try
             {
-                // Получаем специализации с учётом cancellationToken
+                // Retrieve specialization groups using the hh.ru API.
                 var groups = await _hhService.GetSpecializationGroupsAsync(cancellationToken);
                 _view.ShowSpecializations(groups);
-
-                //var inputIds = _view.GetUserInputIds();
-                //var (selectedGroups, selectedSpecializations) = ProcessUserInput(groups, inputIds);
-                //_view.ShowSelectionResults(selectedGroups, selectedSpecializations);
             }
             catch (ApiRequestException ex)
             {
-                _view.ShowError($"Ошибка API: {ex.Message}");
+                _view.ShowError($"API error: {ex.Message}");
             }
             catch (Exception ex)
             {
-                _view.ShowError($"Неожиданная ошибка: {ex.Message}");
+                _view.ShowError($"Unexpected error: {ex.Message}");
             }
-        }
-
-        private (List<string>, List<string>) ProcessUserInput(List<SpecializationGroup> groups, HashSet<string> inputIds)
-        {
-            var selectedGroups = new List<string>();
-            var selectedSpecializations = new List<string>();
-
-            foreach (var group in groups)
-            {
-                if (inputIds.Contains(group.Id))
-                {
-                    selectedGroups.Add(group.Name);
-                }
-
-                var matchingSpecs = group.Specializations?
-                    .Where(spec => inputIds.Contains(spec.Id))
-                    .Select(spec => spec.Name) ?? Enumerable.Empty<string>();
-
-                selectedSpecializations.AddRange(matchingSpecs);
-            }
-
-            return (selectedGroups, selectedSpecializations);
         }
     }
 }
