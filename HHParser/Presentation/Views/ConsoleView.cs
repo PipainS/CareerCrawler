@@ -2,6 +2,7 @@
 using HHParser.Common.Extensions;
 using HHParser.Domain.Enums;
 using HHParser.Domain.Models;
+using Spectre.Console;
 
 namespace HHParser.Presentation.Views
 {
@@ -15,15 +16,20 @@ namespace HHParser.Presentation.Views
         /// </summary>
         public void ShowMainMenu()
         {
-            Console.Clear();
-            Console.WriteLine("Main Menu:");
+            AnsiConsole.Clear();
+            AnsiConsole.MarkupLine("[bold underline]Main Menu[/]\n");
+
+            var table = new Table().RoundedBorder();
+            table.AddColumn(new TableColumn("Option").LeftAligned());
+            table.AddColumn(new TableColumn("Description").LeftAligned());
 
             foreach (MainMenuOption option in Enum.GetValues(typeof(MainMenuOption)))
             {
-                Console.WriteLine($"{(int)option}. {option.GetDisplayName()}");
+                table.AddRow($"[green]{(int)option}[/]", option.GetDisplayName());
             }
 
-            Console.Write("Select a menu option: ");
+            AnsiConsole.Write(table);
+            AnsiConsole.Markup("\n[bold]Select a menu option:[/] ");
         }
 
         /// <summary>
@@ -32,17 +38,40 @@ namespace HHParser.Presentation.Views
         /// <param name="groups">A list of specialization groups to display.</param>
         public void ShowSpecializations(List<SpecializationGroup> groups)
         {
-            Console.WriteLine("\nList of groups and specializations with their IDs:\n");
+            AnsiConsole.Clear();
+            AnsiConsole.MarkupLine("[bold underline]List of Groups and Specializations:[/]");
+
             foreach (var group in groups)
             {
-                Console.WriteLine($"Group (ID): {group.Id} Name: {group.Name}");
-                foreach (var spec in group.Specializations ?? [])
+                var groupPanel = new Panel(new Markup($"[bold]Group ID:[/] {group.Id}\n[bold]Group Name:[/] {group.Name}"))
                 {
-                    Console.WriteLine($"   Specialization: {spec.Name} (ID: {spec.Id})");
+                    Header = new PanelHeader($"Group: {group.Name}", Justify.Center),
+                    Border = BoxBorder.Rounded
+                };
+                AnsiConsole.Write(groupPanel);
+
+                if (group.Specializations != null && group.Specializations.Any())
+                {
+                    var specTable = new Table().RoundedBorder();
+                    specTable.AddColumn(new TableColumn("Specialization Name").LeftAligned());
+                    specTable.AddColumn(new TableColumn("Specialization ID").Centered());
+
+                    foreach (var spec in group.Specializations)
+                    {
+                        specTable.AddRow($"[yellow]{spec.Name}[/]", spec.Id.ToString());
+                    }
+
+                    AnsiConsole.Write(specTable);
                 }
+                else
+                {
+                    AnsiConsole.MarkupLine("[italic]No specializations available.[/]");
+                }
+
+                AnsiConsole.Write(new Rule());
             }
 
-            Console.WriteLine("\nPress any key to continue...");
+            AnsiConsole.MarkupLine("\nPress any key to continue...");
             Console.ReadKey();
         }
 
@@ -52,17 +81,41 @@ namespace HHParser.Presentation.Views
         /// <param name="categories">A list of professional roles categories to display.</param>
         public void ShowProfessionalRoles(List<ProfessionalRolesCategory> categories)
         {
-            Console.WriteLine("\nList of professional roles:\n");
+            AnsiConsole.Clear();
+            AnsiConsole.MarkupLine("[bold underline]List of Professional Roles:[/]");
+
             foreach (var category in categories)
             {
-                Console.WriteLine($"Category (ID): {category.Id} Name: {category.Name}");
-                foreach (var role in category.Roles ?? [])
+                var categoryPanel = new Panel(new Markup($"[bold]Category ID:[/] {category.Id}\n[bold]Category Name:[/] {category.Name}"))
                 {
-                    Console.WriteLine($"   Role: {role.Name} (ID: {role.Id})");
+                    Header = new PanelHeader($"Category: {category.Name}", Justify.Center),
+                    Border = BoxBorder.Rounded
+                };
+                AnsiConsole.Write(categoryPanel);
+
+                if (category.Roles != null && category.Roles.Count != 0)
+                {
+                    // Create a table for the roles
+                    var roleTable = new Table().RoundedBorder();
+                    roleTable.AddColumn(new TableColumn("Role Name").LeftAligned());
+                    roleTable.AddColumn(new TableColumn("Role ID").Centered());
+
+                    foreach (var role in category.Roles)
+                    {
+                        roleTable.AddRow($"[green]{role.Name}[/]", role.Id.ToString());
+                    }
+
+                    AnsiConsole.Write(roleTable);
                 }
+                else
+                {
+                    AnsiConsole.MarkupLine("[italic]No roles available.[/]");
+                }
+
+                AnsiConsole.Write(new Rule());
             }
 
-            Console.WriteLine("\nPress any key to continue...");
+            AnsiConsole.MarkupLine("\nPress any key to continue...");
             Console.ReadKey();
         }
 
