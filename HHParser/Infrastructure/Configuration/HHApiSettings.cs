@@ -23,5 +23,7 @@
         /// Example value: "professional_roles"
         /// </summary>
         public string ProfessionalRolesPath { get; set; } = string.Empty;
+
+        public string VacanciesUrl { get; set; } = string.Empty;
     }
 }

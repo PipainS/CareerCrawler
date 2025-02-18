@@ -8,6 +8,11 @@ using HHParser.Infrastructure.Services.Ex;
 using System.Runtime.CompilerServices;
 using HHParser.Infrastructure.Configuration.Constants;
 using Microsoft.Extensions.Caching.Memory;
+using HHParser.Domain.Models.Vacancies;
+using Microsoft.AspNetCore.WebUtilities;
+using Spectre.Console;
+using HHParser.Infrastructure.Services.Csv;
+using AutoMapper;
 
 namespace HHParser.Infrastructure.Services.Api
 {
@@ -21,11 +26,14 @@ namespace HHParser.Infrastructure.Services.Api
         private readonly HttpClient _client;
         private readonly ILogger<HeadHunterApiClient> _logger;
         private readonly IMemoryCache _cache;
+        private readonly IMapper _mapper;
+
         #endregion
 
         #region Endpoint fields
         private readonly string _specializationsUrl;
         private readonly string _professionalRolesUrl;
+        private readonly string _vacanciesUrl;
         #endregion
 
         /// <summary>
@@ -38,9 +46,11 @@ namespace HHParser.Infrastructure.Services.Api
         public HeadHunterApiClient(HttpClient client,
             IOptions<HHApiSettings> options,
             ILogger<HeadHunterApiClient> logger,
-            IMemoryCache cache)
+            IMemoryCache cache,
+            IMapper mapper)
         {
             _client = client;
+            _mapper = mapper;
             _logger = logger;
             _cache = cache;
 
@@ -52,10 +62,17 @@ namespace HHParser.Infrastructure.Services.Api
                 throw new ArgumentException("BaseUrl is not set in HHApiSettings.");
             }
 
+            // Добавляем обязательный заголовок User-Agent
+            if (!_client.DefaultRequestHeaders.Contains("User-Agent"))
+            {
+                _client.DefaultRequestHeaders.Add("User-Agent", "HH-User-Agent");
+            }
+
             _client.BaseAddress = new Uri(settings.BaseUrl);
 
             _specializationsUrl = settings.SpecializationsPath;
             _professionalRolesUrl = settings.ProfessionalRolesPath;
+            _vacanciesUrl = settings.VacanciesUrl;
         }
 
         /// <summary>
@@ -84,6 +101,148 @@ namespace HHParser.Infrastructure.Services.Api
                 cancellationToken);
 
             return response?.Categories ?? [];
+        }
+
+        /// <summary>
+        /// Основной метод, который выполняет:
+        /// 1. Получение базовых вакансий (20 страниц),
+        /// 2. Обогащение каждой вакансии дополнительными данными (например, key_skills),
+        /// 3. Сохранение итогового датасета в CSV файл.
+        /// </summary>
+        public async Task ProcessVacanciesAsync(Dictionary<string, string> baseParameters, CancellationToken cancellationToken = default)
+        {
+            List<VacancySummary> vacancies = await GetVacanciesAsync(baseParameters, cancellationToken);
+
+            // 2. Обходим вакансии для получения дополнительных данных и формируем EnrichedVacancy
+            List<EnrichedVacancy> enrichedVacancies = await EnrichVacanciesAsync(vacancies, cancellationToken);
+
+            // 3. Сохраняем полученные данные в CSV (например, в файл "merged_vacancies.csv")
+            CsvFileService.SaveVacanciesToCsv(enrichedVacancies, "merged_vacancies.csv");
+        }
+
+        /// <summary>
+        /// Получает базовые данные вакансий с API hh.ru по заданным параметрам.
+        /// Собирать будем данные за 20 страниц.
+        /// </summary>
+        public async Task<List<VacancySummary>> GetVacanciesAsync(Dictionary<string, string> baseParameters, CancellationToken cancellationToken = default)
+        {
+            var allVacancies = new List<VacancySummary>();
+            int totalPages = 20;
+
+            await AnsiConsole.Progress().StartAsync(async ctx =>
+            {
+                var progressTask = ctx.AddTask("[green]Загрузка страниц вакансий...[/]", maxValue: totalPages);
+
+                for (int page = 0; page < totalPages; page++)
+                {
+                    // Создаём копию параметров и указываем номер страницы
+                    var parameters = new Dictionary<string, string>(baseParameters)
+                    {
+                        ["page"] = page.ToString()
+                    };
+
+                    // Перед каждым запросом ждём 2 секунды (ограничение API)
+                    await Task.Delay(2000, cancellationToken);
+
+                    // Формируем URL с параметрами запроса
+                    var queryUrl = QueryHelpers.AddQueryString(_vacanciesUrl, parameters);
+                    _logger.LogInformation("Запрос вакансий для страницы {Page} по URL: {Url}", page, queryUrl);
+
+                    try
+                    {
+                        // Предполагается, что API возвращает объект типа VacancyListResponse с полем Items
+                        var response = await _client.GetFromJsonAsync<VacancyListResponse>(queryUrl, cancellationToken);
+                        if (response?.Items != null)
+                        {
+                            allVacancies.AddRange(response.Items);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Ошибка при загрузке страницы {Page}", page);
+                        AnsiConsole.MarkupLine($"[red]Ошибка при загрузке страницы {page}[/]");
+                        break;
+                    }
+
+                    progressTask.Increment(1);
+                }
+            });
+
+            return allVacancies;
+        }
+
+        /// <summary>
+        /// Обходит список вакансий и для каждой получает подробную информацию (например, key_skills).
+        /// Результатом является список объектов EnrichedVacancy.
+        /// </summary>
+        private async Task<List<EnrichedVacancy>> EnrichVacanciesAsync(List<VacancySummary> vacancies, CancellationToken cancellationToken)
+        {
+            var enrichedList = new List<EnrichedVacancy>();
+            int totalVacancies = vacancies.Count;
+
+            await AnsiConsole.Progress().StartAsync(async ctx =>
+            {
+                var progressTask = ctx.AddTask("[green]Обогащение вакансий...[/]", maxValue: totalVacancies);
+
+                foreach (var vacancy in vacancies)
+                {
+                    Console.WriteLine($"Вакансия: {vacancy.Id}");
+                    // Небольшая задержка между запросами (например, 1 секунда)
+                    await Task.Delay(2000, cancellationToken);
+
+                    // Получаем подробности вакансии по её ID
+                    VacancyDetail details = await GetVacancyDetailsAsync(vacancy.Id, cancellationToken);
+
+                    // Маппинг базовых данных
+                    var enriched = _mapper.Map<EnrichedVacancy>(vacancy);
+
+                    // Если нужно объединить данные из VacancyDetail (например, KeySkills)
+                    if (details != null && details.KeySkills != null)
+                    {
+                        enriched.KeySkills = details.KeySkills.Select(ks => ks.Name).ToList();
+                    }
+
+                    //enrichedList.Add(enriched);
+                    //progressTask.Increment(1);
+                    //// Формируем объект EnrichedVacancy, объединяя базовые данные и дополнительные (ключевые навыки)
+                    //var enriched = new EnrichedVacancy(vacancy)
+                    //{
+                    //    KeySkills = details?.KeySkills?.Select(ks => ks.Name).ToList() ?? new List<string>()
+                    //};
+
+
+                    enrichedList.Add(enriched);
+                    progressTask.Increment(1);
+                }
+            });
+
+            return enrichedList;
+        }
+
+        /// <summary>
+        /// Получает подробную информацию по конкретной вакансии (например, ключевые навыки).
+        /// URL формируется как _vacanciesUrl/{vacancyId}
+        /// </summary>
+        public async Task<VacancyDetail> GetVacancyDetailsAsync(string vacancyId, CancellationToken cancellationToken)
+        {
+            string detailUrl = $"{_vacanciesUrl}/{vacancyId}";
+
+            try
+            {
+                var response = await _client.GetAsync(detailUrl, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Ошибка при получении деталей вакансии {VacancyId}: {StatusCode}", vacancyId, response.StatusCode);
+                    return null;
+                }
+                var details = await response.Content.ReadFromJsonAsync<VacancyDetail>(cancellationToken: cancellationToken);
+                return details;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при запросе деталей вакансии {VacancyId}", vacancyId);
+                return null;
+            }
         }
 
         /// <summary>

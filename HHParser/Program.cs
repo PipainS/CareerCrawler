@@ -1,4 +1,5 @@
 ﻿using HHParser.Application.Interfaces;
+using HHParser.Application.Mapping;
 using HHParser.Application.Services.MenuService;
 using HHParser.Infrastructure.Configuration;
 using HHParser.Infrastructure.Configuration.Constants;
@@ -38,6 +39,8 @@ services.AddMemoryCache();
 
 // Registering HH API settings using Options pattern
 services.Configure<HHApiSettings>(configuration.GetSection(ConfigurationKeys.HHApiSettingsSection));
+
+services.AddAutoMapper(typeof(MappingProfile));
 
 // Registering Presentation layer
 services.AddSingleton<IConsoleView, ConsoleView>();
