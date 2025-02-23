@@ -31,7 +31,7 @@ namespace HHParser.Application.Interfaces
         Task<List<ProfessionalRolesCategory>> GetProfessionalRolesGroupsAsync(CancellationToken cancellationToken = default);
 
         Task<List<VacancySummary>> GetVacanciesAsync(Dictionary<string, string> parameters, CancellationToken cancellationToken = default);
-        Task ProcessVacanciesAsync(Dictionary<string, string> parameters, CancellationToken cancellationToken = default);
+        Task ProcessVacanciesAsync(Dictionary<string, string> parameters, IDataExporter exporter, CancellationToken cancellationToken = default);
 
     }
 }

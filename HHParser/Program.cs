@@ -1,6 +1,9 @@
 ﻿using HHParser.Application.Interfaces;
+using HHParser.Application.Interfaces.Progress;
 using HHParser.Application.Mapping;
+using HHParser.Application.Services;
 using HHParser.Application.Services.MenuService;
+using HHParser.Application.Services.Progress;
 using HHParser.Infrastructure.Configuration;
 using HHParser.Infrastructure.Configuration.Constants;
 using HHParser.Infrastructure.Services.Api;
@@ -44,6 +47,9 @@ services.AddAutoMapper(typeof(MappingProfile));
 
 // Registering Presentation layer
 services.AddSingleton<IConsoleView, ConsoleView>();
+
+services.AddSingleton<ICustomProgressBarService, CustomProgressBarService>();
+services.AddSingleton<ICachingService, MemoryCachingService>();
 
 // Automated registration of menu commands
 services.Scan(scan => scan

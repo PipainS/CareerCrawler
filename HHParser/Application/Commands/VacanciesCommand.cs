@@ -1,5 +1,7 @@
 ﻿using HHParser.Application.Interfaces;
+using HHParser.Application.Services.CommonClasses;
 using HHParser.Domain.Enums;
+using HHParser.Domain.Models;
 using HHParser.Infrastructure.Services.Ex;
 using Spectre.Console;
 
@@ -23,12 +25,26 @@ namespace HHParser.Application.Commands
         {
             try
             {
-                var parameters = PromptForVacancySearchParameters();
+                var vacancyParams = PromptForVacancySearchParameters();
+                var queryParameters = QueryParameterHelper.ToDictionary(vacancyParams);
 
-                // Получаем базовый список вакансий в виде VacancySummary (новые модели)
-                //var vacancies = await _hhService.GetVacanciesAsync(parameters, cancellationToken);
-                //_view.ShowVacancies(vacancies);
-                await _hhService.ProcessVacanciesAsync(parameters, cancellationToken);  
+
+                // Запрашиваем формат экспорта у пользователя с использованием enum
+                var exportFormat = AnsiConsole.Prompt(
+                    new SelectionPrompt<ExportFormat>()
+                        .Title("Выберите формат сохранения данных:")
+                        .AddChoices(Enum.GetValues(typeof(ExportFormat)).Cast<ExportFormat>())
+                );
+
+                // Получаем нужный экспортер через фабрику
+                IDataExporter exporter = DataExporterFactory.GetExporter(exportFormat);
+
+                // Передаём константу с именем файла (например, для вакансий)
+                await _hhService.ProcessVacanciesAsync(queryParameters, exporter, cancellationToken);
+            }
+            catch (NotSupportedException ex)
+            {
+                _view.ShowError($"Не реализован формат: {ex.Message}");
             }
             catch (ApiRequestException ex)
             {
@@ -40,25 +56,11 @@ namespace HHParser.Application.Commands
             }
         }
 
-
-
-        /// <summary>
-        /// Запрашивает у пользователя параметры поиска вакансий.
-        /// </summary>
-        private Dictionary<string, string> PromptForVacancySearchParameters()
+        private static VacancySearchParameters PromptForVacancySearchParameters()
         {
-            var parameters = new Dictionary<string, string>();
-
-            var text = AnsiConsole.Ask<string>("Введите ключевое слово для поиска ([green]text[/]):");
-            if (!string.IsNullOrWhiteSpace(text))
-            {
-                parameters.Add("text", text);
-            }
-
-            // Количество вакансий на странице (по умолчанию 10, максимум 100)
-            var perPage = AnsiConsole.Ask<int>("Введите количество вакансий на странице ([green]per_page[/]) (по умолчанию 10):", 10);
-            parameters.Add("per_page", perPage.ToString());
-
+            var parameters = new VacancySearchParameters();
+            parameters.Text = AnsiConsole.Ask<string>("Введите ключевое слово для поиска ([green]text[/]):");
+            parameters.PerPage = AnsiConsole.Ask<int>("Введите количество вакансий на странице ([green]per_page[/]) (по умолчанию 10):", 10);
             return parameters;
         }
     }
