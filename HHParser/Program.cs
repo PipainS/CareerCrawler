@@ -1,5 +1,9 @@
 ﻿using HHParser.Application.Interfaces;
+using HHParser.Application.Interfaces.Progress;
+using HHParser.Application.Mapping;
+using HHParser.Application.Services;
 using HHParser.Application.Services.MenuService;
+using HHParser.Application.Services.Progress;
 using HHParser.Infrastructure.Configuration;
 using HHParser.Infrastructure.Configuration.Constants;
 using HHParser.Infrastructure.Services.Api;
@@ -38,6 +42,11 @@ services.AddMemoryCache();
 
 // Registering HH API settings using Options pattern
 services.Configure<HHApiSettings>(configuration.GetSection(ConfigurationKeys.HHApiSettingsSection));
+
+services.AddAutoMapper(typeof(MappingProfile));
+
+services.AddSingleton<ICustomProgressBarService, CustomProgressBarService>();
+services.AddSingleton<ICachingService, MemoryCachingService>();
 
 // Registering Presentation layer
 services.AddSingleton<IConsoleView, ConsoleView>();

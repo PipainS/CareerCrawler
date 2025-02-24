@@ -1,4 +1,5 @@
 ﻿using HHParser.Domain.Models;
+using HHParser.Domain.Models.Vacancies;
 
 namespace HHParser.Application.Interfaces
 {

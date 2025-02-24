@@ -1,7 +1,6 @@
 ﻿using HHParser.Application.Interfaces;
 using HHParser.Domain.Enums;
 using HHParser.Infrastructure.Services.Ex;
-using Microsoft.Extensions.Logging;
 
 namespace HHParser.Application.Commands
 {

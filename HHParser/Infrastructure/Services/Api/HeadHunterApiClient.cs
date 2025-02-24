@@ -7,141 +7,215 @@ using System.Net.Http.Json;
 using HHParser.Infrastructure.Services.Ex;
 using System.Runtime.CompilerServices;
 using HHParser.Infrastructure.Configuration.Constants;
-using Microsoft.Extensions.Caching.Memory;
+using AutoMapper;
+using System.Collections.Concurrent;
+using Polly;
+using HHParser.Application.Interfaces.Progress;
+using HHParser.Domain.Models.Vacancies;
+using Microsoft.AspNetCore.WebUtilities;
+using HHParser.Application.Services;
 
 namespace HHParser.Infrastructure.Services.Api
 {
     /// <summary>
     /// Handles communication with the HH.ru API, including retrieving data such as specialization groups and professional roles.
-    /// Caches the results to improve performance by reducing the number of API requests.
+    /// Caches the results using a separate caching service.
     /// </summary>
     public class HeadHunterApiClient : IHeadHunterApiClient
     {
-        #region DI fields
+        #region Dependency Injection Fields
         private readonly HttpClient _client;
         private readonly ILogger<HeadHunterApiClient> _logger;
-        private readonly IMemoryCache _cache;
+        private readonly IMapper _mapper;
+        private readonly ICustomProgressBarService _progressService;
+        private readonly ICachingService _cachingService;
         #endregion
 
-        #region Endpoint fields
+        #region Endpoint Fields
         private readonly string _specializationsUrl;
         private readonly string _professionalRolesUrl;
+        private readonly string _vacanciesUrl;
+        private readonly string _vacancyDetailTemplate;
         #endregion
 
-        /// <summary>
-        /// Initializes a new instance of the HHApiClient class.
-        /// </summary>
-        /// <param name="client">The HTTP client to use for making API requests.</param>
-        /// <param name="options">Settings for the HH API, including the base URL and paths for specializations and professional roles.</param>
-        /// <param name="logger">Logger for logging API-related activities and errors.</param>
-        /// <param name="cache">In-memory cache used to store API responses to avoid redundant requests.</param>
         public HeadHunterApiClient(HttpClient client,
             IOptions<HHApiSettings> options,
             ILogger<HeadHunterApiClient> logger,
-            IMemoryCache cache)
+            IMapper mapper,
+            ICustomProgressBarService progressService,
+            ICachingService cachingService)
         {
             _client = client;
+            _mapper = mapper;
             _logger = logger;
-            _cache = cache;
+            _progressService = progressService;
+            _cachingService = cachingService;
 
             var settings = options.Value;
-
             if (string.IsNullOrWhiteSpace(settings.BaseUrl))
             {
                 _logger.LogError("BaseUrl is not set in HHApiSettings.");
                 throw new ArgumentException("BaseUrl is not set in HHApiSettings.");
             }
 
-            _client.BaseAddress = new Uri(settings.BaseUrl);
-
-            _specializationsUrl = settings.SpecializationsPath;
-            _professionalRolesUrl = settings.ProfessionalRolesPath;
-        }
-
-        /// <summary>
-        /// Retrieves a list of specialization groups from the HH API, with caching to improve performance.
-        /// </summary>
-        /// <param name="cancellationToken">A token for cancelling the request if needed.</param>
-        /// <returns>A list of specialization groups.</returns>
-        public async Task<List<SpecializationGroup>> GetSpecializationGroupsAsync(CancellationToken cancellationToken = default)
-        {
-            return await GetDataWithCacheAsync<SpecializationGroup>(
-                _specializationsUrl,
-                CacheConstants.SpecializationsCacheKey,
-                cancellationToken);
-        }
-
-        /// <summary>
-        /// Retrieves a list of professional roles categories from the HH API, with caching to improve performance.
-        /// </summary>
-        /// <param name="cancellationToken">A token for cancelling the request if needed.</param>
-        /// <returns>A list of professional roles categories.</returns>
-        public async Task<List<ProfessionalRolesCategory>> GetProfessionalRolesGroupsAsync(CancellationToken cancellationToken = default)
-        {
-            var response = await GetDataWithCacheAsObjectAsync<ProfessionalRolesResponse>(
-                _professionalRolesUrl,
-                CacheConstants.ProfessionalRolesCacheKey,
-                cancellationToken);
-
-            return response?.Categories ?? [];
-        }
-
-        /// <summary>
-        /// Retrieves data from the API and caches the result if it's not already cached.
-        /// </summary>
-        /// <typeparam name="T">The type of data expected from the API response.</typeparam>
-        /// <param name="endPoint">The API endpoint to retrieve data from.</param>
-        /// <param name="cacheKey">The cache key used to store/retrieve the data from the cache.</param>
-        /// <param name="cancellationToken">A token for cancelling the request if needed.</param>
-        /// <returns>The cached or retrieved data.</returns>
-        private async Task<T?> GetDataWithCacheAsObjectAsync<T>(
-            string endPoint,
-            string cacheKey,
-            CancellationToken cancellationToken)
-        {
-            if (_cache.TryGetValue(cacheKey, out T cachedValue))
+            if (!_client.DefaultRequestHeaders.Contains("User-Agent"))
             {
-                _logger.LogInformation("Cache hit for key {CacheKey}. Using cached data.", cacheKey);
-                return cachedValue;
+                _client.DefaultRequestHeaders.Add("User-Agent", "HH-User-Agent");
             }
 
-            _logger.LogInformation("Cache miss for key {CacheKey}. Requesting data from URL: {Url}", cacheKey, endPoint);
-            var value = await GetDataAsObjectAsync<T>(endPoint, cancellationToken);
-
-            _cache.Set(cacheKey, value, CacheConstants.CacheDuration);
-            return value;
+            _client.BaseAddress = new Uri(settings.BaseUrl);
+            _specializationsUrl = settings.SpecializationsPath;
+            _professionalRolesUrl = settings.ProfessionalRolesPath;
+            _vacanciesUrl = settings.VacanciesUrl;
+            _vacancyDetailTemplate = settings.VacancyDetailTemplate;
         }
 
         /// <summary>
-        /// Fetches data from the API and returns it as an object of type T.
-        /// This method is used when the response is expected to be deserialized directly into an object.
+        /// Processes vacancies by retrieving, enriching, and exporting them.
         /// </summary>
-        /// <typeparam name="T">The type of the object expected in the response.</typeparam>
-        /// <param name="endPoint">The API endpoint to retrieve data from.</param>
-        /// <param name="cancellationToken">A token for cancelling the request if needed.</param>
-        /// <param name="callerMethod">The name of the calling method (used for logging purposes).</param>
-        /// <returns>The deserialized data from the API response.</returns>
-        private async Task<T?> GetDataAsObjectAsync<T>(
-            string endPoint,
-            CancellationToken cancellationToken,
-            [CallerMemberName] string callerMethod = "")
+        /// <param name="parameters">The query parameters for retrieving vacancies.</param>
+        /// <param name="exporter">The data exporter used to export enriched vacancies.</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        public async Task ProcessVacanciesAsync(Dictionary<string, string> parameters, IDataExporter exporter, CancellationToken cancellationToken = default)
+        {
+            var vacancies = await GetVacanciesAsync(parameters, cancellationToken);
+            var enrichedVacancies = await EnrichVacanciesAsync(vacancies, cancellationToken);
+            exporter.ExportVacancies(enrichedVacancies, ExportFileNameConstants.VacanciesFileName);
+        }
+
+        private async Task<List<VacancySummary>> GetVacanciesAsync(Dictionary<string, string> baseParameters, CancellationToken cancellationToken = default)
+        {
+            var allVacancies = new ConcurrentBag<VacancySummary>();
+            var semaphore = new SemaphoreSlim(HhApiConstants.MaxConcurrentRequests);
+            var retryPolicy = PollyPolicyFactory.CreatePolicyWrap<VacancyListResponse>(_logger, nameof(GetVacanciesAsync));
+
+            await _progressService.StartAsync(HhApiConstants.TotalPages, async updater =>
+            {
+                var tasks = Enumerable.Range(0, HhApiConstants.TotalPages)
+                    .Select(async page =>
+                    {
+                        await ExecuteWithDelayAndSemaphoreAsync(semaphore, async () =>
+                        {
+                            var parameters = new Dictionary<string, string>(baseParameters)
+                            {
+                                [HhApiParameterConstants.Page] = page.ToString()
+                            };
+
+                            string queryUrl = QueryHelpers.AddQueryString(_vacanciesUrl, parameters);
+                            var context = new Context();
+                            context[PollyContextKeys.Page] = page;
+
+                            try
+                            {
+                                var response = await retryPolicy.ExecuteAsync(
+                                    (ctx, ct) => GetDataAsObjectAsync<VacancyListResponse>(queryUrl, ct),
+                                    context,
+                                    cancellationToken);
+
+                                if (response.Items != null)
+                                {
+                                    foreach (var item in response.Items)
+                                    {
+                                        allVacancies.Add(item);
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Failed to retrieve vacancies for page {Page} after multiple attempts", page);
+                            }
+                        }, cancellationToken);
+                        updater.Increment(HhApiConstants.ProgressIncrementPerItem);
+                    });
+                await Task.WhenAll(tasks);
+            });
+
+            return allVacancies.ToList();
+        }
+
+        private async Task<List<EnrichedVacancy>> EnrichVacanciesAsync(List<VacancySummary> vacancies, CancellationToken cancellationToken)
+        {
+            var enrichedVacancies = new ConcurrentBag<EnrichedVacancy>();
+            var semaphore = new SemaphoreSlim(HhApiConstants.MaxConcurrentRequests);
+            var retryPolicy = PollyPolicyFactory.CreatePolicyWrap<VacancyDetail>(_logger, nameof(EnrichVacanciesAsync));
+
+            await _progressService.StartAsync(vacancies.Count, async updater =>
+            {
+                var tasks = vacancies.Select(async vacancy =>
+                {
+                    await ExecuteWithDelayAndSemaphoreAsync(semaphore, async () =>
+                    {
+                        string detailUrl = string.Format(_vacancyDetailTemplate, vacancy.Id);
+
+                        var context = new Context();
+                        context[PollyContextKeys.VacancyId] = vacancy.Id;
+
+                        VacancyDetail details = null;
+                        try
+                        {
+                            details = await retryPolicy.ExecuteAsync(
+                                ctx => GetDataAsObjectAsync<VacancyDetail>(detailUrl, cancellationToken),
+                                context);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to retrieve vacancy details for vacancy {VacancyId} after multiple attempts", vacancy.Id);
+                        }
+
+                        var enriched = _mapper.Map<EnrichedVacancy>(vacancy);
+                        if (details != null)
+                        {
+                            enriched.Description = details?.Description;
+                            enriched.KeySkills = details?.KeySkills?.Select(ks => ks.Name).ToList() ?? new List<string>();
+                        }
+
+                        enrichedVacancies.Add(enriched);
+                    }, cancellationToken);
+                    updater.Increment(HhApiConstants.ProgressIncrementPerItem);
+                });
+                await Task.WhenAll(tasks);
+            });
+
+            return enrichedVacancies.ToList();
+        }
+
+        public async Task<List<SpecializationGroup>> GetSpecializationGroupsAsync(CancellationToken cancellationToken = default)
+        {
+            return await _cachingService.GetOrAddAsync(
+                CacheConstants.SpecializationsCacheKey,
+                async () => await GetDataAsObjectAsync<List<SpecializationGroup>>(_specializationsUrl, cancellationToken),
+                CacheConstants.CacheDuration) ?? new List<SpecializationGroup>();
+        }
+
+        public async Task<List<ProfessionalRolesCategory>> GetProfessionalRolesGroupsAsync(CancellationToken cancellationToken = default)
+        {
+            var response = await _cachingService.GetOrAddAsync(
+                CacheConstants.ProfessionalRolesCacheKey,
+                async () => await GetDataAsObjectAsync<ProfessionalRolesResponse>(_professionalRolesUrl, cancellationToken),
+                CacheConstants.CacheDuration);
+
+            return response?.Categories ?? new List<ProfessionalRolesCategory>();
+        }
+
+        private async Task<T> GetDataAsObjectAsync<T>(string endPoint, CancellationToken cancellationToken, [CallerMemberName] string callerMethod = "")
         {
             try
             {
-                _logger.LogInformation("Fetching data from {CallerMethod}: {Url}", callerMethod, endPoint);
-
                 var response = await _client.GetAsync(endPoint, cancellationToken).ConfigureAwait(false);
-
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogError("Unsuccessful response: {StatusCode} while requesting {Url} in {CallerMethod}",
                         response.StatusCode, endPoint, callerMethod);
                     throw new ApiRequestException($"Unsuccessful response from server: {response.StatusCode}");
                 }
+                var data = await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken).ConfigureAwait(false);
+                if (EqualityComparer<T>.Default.Equals(data, default))
+                {
+                    throw new ApiRequestException("Empty response received from API");
+                }
+                return data;
 
-                var result = await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken)
-                             .ConfigureAwait(false);
-                return result;
             }
             catch (HttpRequestException ex)
             {
@@ -156,70 +230,23 @@ namespace HHParser.Infrastructure.Services.Api
         }
 
         /// <summary>
-        /// Retrieves data from the API and caches the result if it's not already cached.
-        /// This method is used when the response is expected to be a list of items.
+        /// Executes an operation with a random delay within the context of a specified semaphore.
         /// </summary>
-        /// <typeparam name="T">The type of the list items in the response.</typeparam>
-        /// <param name="endPoint">The API endpoint to retrieve data from.</param>
-        /// <param name="cacheKey">The cache key used to store/retrieve the data from the cache.</param>
-        /// <param name="cancellationToken">A token for cancelling the request if needed.</param>
-        /// <returns>A list of the items retrieved from the API or cache.</returns>
-        private async Task<List<T>> GetDataWithCacheAsync<T>(
-            string endPoint,
-            string cacheKey,
-            CancellationToken cancellationToken)
+        /// <param name="semaphore">The semaphore to limit concurrent requests.</param>
+        /// <param name="operation">The operation to execute.</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        private static async Task ExecuteWithDelayAndSemaphoreAsync(SemaphoreSlim semaphore, Func<Task> operation, CancellationToken cancellationToken)
         {
-            if (_cache.TryGetValue(cacheKey, out List<T> cachedValue))
-            {
-                _logger.LogInformation("Cache hit for key {CacheKey}. Using cached data.", cacheKey);
-                return cachedValue;
-            }
-
-            _logger.LogInformation("Cache miss for key {CacheKey}. Requesting data from URL: {Url}", cacheKey, endPoint);
-            var value = await GetDataAsync<T>(endPoint, cancellationToken);
-
-            _cache.Set(cacheKey, value, CacheConstants.CacheDuration);
-            return value;
-        }
-
-        /// <summary>
-        /// Fetches a list of items from the API and returns it as a list of type T.
-        /// This method is used when the response is expected to be a list.
-        /// </summary>
-        /// <typeparam name="T">The type of the list items expected in the response.</typeparam>
-        /// <param name="endPoint">The API endpoint to retrieve data from.</param>
-        /// <param name="cancellationToken">A token for cancelling the request if needed.</param>
-        /// <param name="callerMethod">The name of the calling method (used for logging purposes).</param>
-        /// <returns>A list of items deserialized from the API response.</returns>
-        private async Task<List<T>> GetDataAsync<T>(
-            string endPoint,
-            CancellationToken cancellationToken,
-            [CallerMemberName] string callerMethod = "")
-        {
+            await semaphore.WaitAsync(cancellationToken);
             try
             {
-                _logger.LogInformation("Fetching data from {CallerMethod}: {Url}", callerMethod, endPoint);
-
-                var response = await _client.GetAsync(endPoint, cancellationToken).ConfigureAwait(false);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    _logger.LogError("Unsuccessful response: {StatusCode} while requesting {Url} in {CallerMethod}", response.StatusCode, endPoint, callerMethod);
-                    throw new ApiRequestException($"Unsuccessful response from server: {response.StatusCode}");
-                }
-
-                var result = await response.Content.ReadFromJsonAsync<List<T>>(cancellationToken: cancellationToken).ConfigureAwait(false);
-                return result ?? [];
+                int delayMs = Random.Shared.Next((int)HhApiConstants.MinRequestDelay.TotalMilliseconds, (int)HhApiConstants.MaxRequestDelay.TotalMilliseconds);
+                await Task.Delay(delayMs, cancellationToken);
+                await operation();
             }
-            catch (HttpRequestException ex)
+            finally
             {
-                _logger.LogError(ex, "HTTP error in {CallerMethod} while requesting: {Url}", callerMethod, endPoint);
-                throw new ApiRequestException($"Error while fetching data in method {callerMethod}", ex);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in {CallerMethod} while fetching data", callerMethod);
-                throw new ApiRequestException($"Error while fetching data in method {callerMethod}", ex);
+                semaphore.Release();
             }
         }
     }

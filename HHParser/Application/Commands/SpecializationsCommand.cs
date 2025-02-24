@@ -38,7 +38,6 @@ namespace HHParser.Application.Commands
         {
             try
             {
-                // Retrieve specialization groups using the hh.ru API.
                 var groups = await _hhService.GetSpecializationGroupsAsync(cancellationToken);
                 _view.ShowSpecializations(groups);
             }

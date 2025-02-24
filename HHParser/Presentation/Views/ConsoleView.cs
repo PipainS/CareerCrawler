@@ -1,5 +1,6 @@
-﻿using HHParser.Application.Interfaces;
-using HHParser.Common.Extensions;
+﻿using System.ComponentModel.DataAnnotations;
+using HHParser.Application.Interfaces;
+using HHParser.Domain.Attributes;
 using HHParser.Domain.Enums;
 using HHParser.Domain.Models;
 using Spectre.Console;
@@ -14,21 +15,74 @@ namespace HHParser.Presentation.Views
         /// <summary>
         /// Displays the main menu with options.
         /// </summary>
+        /// 
         public void ShowMainMenu()
         {
             AnsiConsole.Clear();
             AnsiConsole.MarkupLine("[bold underline]Main Menu[/]\n");
 
-            var table = new Table().RoundedBorder();
-            table.AddColumn(new TableColumn("Option").LeftAligned());
-            table.AddColumn(new TableColumn("Description").LeftAligned());
+            var options = Enum.GetValues(typeof(MainMenuOption)).Cast<MainMenuOption>();
 
-            foreach (MainMenuOption option in Enum.GetValues(typeof(MainMenuOption)))
+            var groupedOptions = options.GroupBy(option =>
             {
-                table.AddRow($"[green]{(int)option}[/]", option.GetDisplayName());
+                var field = option.GetType().GetField(option.ToString());
+                var groupAttr = field?.GetCustomAttributes(typeof(MenuGroupAttribute), false)
+                                     .FirstOrDefault() as MenuGroupAttribute;
+                return groupAttr?.GroupName ?? "Other";
+            });
+
+            var groupPanels = new List<Panel>();
+
+            foreach (var group in groupedOptions)
+            {
+                var table = new Table().RoundedBorder();
+                table.AddColumn(new TableColumn("Option").LeftAligned());
+                table.AddColumn(new TableColumn("Description").LeftAligned());
+
+                foreach (var option in group)
+                {
+                    var field = option.GetType().GetField(option.ToString());
+
+                    var displayAttr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+                        .FirstOrDefault() as DisplayAttribute;
+
+                    string displayName = displayAttr?.Name ?? option.ToString();
+
+                    var statusAttr = field?.GetCustomAttributes(typeof(FeatureStatusAttribute), false)
+                                            .FirstOrDefault() as FeatureStatusAttribute;
+
+                    bool isImplemented = statusAttr?.IsImplemented ?? false;
+
+                    if (isImplemented)
+                    {
+                        table.AddRow(
+                            $"[green]{(int)option}[/]",
+                            $"[green]V {displayName}[/]"
+                        );
+                    }
+                    else
+                    {
+                        table.AddRow(
+                            $"[red]{(int)option}[/]",
+                            $"[red]X {displayName} (Not Implemented)[/]"
+                        );
+                    }
+                }
+                var panel = new Panel(table)
+                {
+                    Header = new PanelHeader($"[bold cyan]{group.Key}[/]", Justify.Center),
+                    Border = BoxBorder.Rounded
+                };
+
+                groupPanels.Add(panel);
             }
 
-            AnsiConsole.Write(table);
+            var columns = new Columns(groupPanels)
+            {
+                Expand = true,
+            };
+
+            AnsiConsole.Write(columns);
             AnsiConsole.Markup("\n[bold]Select a menu option:[/] ");
         }
 
@@ -95,7 +149,6 @@ namespace HHParser.Presentation.Views
 
                 if (category.Roles != null && category.Roles.Count != 0)
                 {
-                    // Create a table for the roles
                     var roleTable = new Table().RoundedBorder();
                     roleTable.AddColumn(new TableColumn("Role Name").LeftAligned());
                     roleTable.AddColumn(new TableColumn("Role ID").Centered());
@@ -118,7 +171,7 @@ namespace HHParser.Presentation.Views
             AnsiConsole.MarkupLine("\nPress any key to continue...");
             Console.ReadKey();
         }
-
+        
         /// <summary>
         /// Displays an error message to the user in red.
         /// </summary>
