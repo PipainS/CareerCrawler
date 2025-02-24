@@ -1,5 +1,4 @@
 ﻿using HHParser.Domain.Models;
-using HHParser.Domain.Models.Vacancies;
 
 namespace HHParser.Application.Interfaces
 {
@@ -29,9 +28,6 @@ namespace HHParser.Application.Interfaces
         /// A task representing the asynchronous operation, with a result of a list of <see cref="ProfessionalRolesCategory"/> objects.
         /// </returns>
         Task<List<ProfessionalRolesCategory>> GetProfessionalRolesGroupsAsync(CancellationToken cancellationToken = default);
-
-        Task<List<VacancySummary>> GetVacanciesAsync(Dictionary<string, string> parameters, CancellationToken cancellationToken = default);
         Task ProcessVacanciesAsync(Dictionary<string, string> parameters, IDataExporter exporter, CancellationToken cancellationToken = default);
-
     }
 }

@@ -84,7 +84,7 @@ namespace HHParser.Infrastructure.Services.Api
             exporter.ExportVacancies(enrichedVacancies, ExportFileNameConstants.VacanciesFileName);
         }
 
-        public async Task<List<VacancySummary>> GetVacanciesAsync(Dictionary<string, string> baseParameters, CancellationToken cancellationToken = default)
+        private async Task<List<VacancySummary>> GetVacanciesAsync(Dictionary<string, string> baseParameters, CancellationToken cancellationToken = default)
         {
             var allVacancies = new ConcurrentBag<VacancySummary>();
             var semaphore = new SemaphoreSlim(HhApiConstants.MaxConcurrentRequests);
@@ -164,10 +164,12 @@ namespace HHParser.Infrastructure.Services.Api
                         }
 
                         var enriched = _mapper.Map<EnrichedVacancy>(vacancy);
-                        if (details?.KeySkills != null)
+                        if (details != null)
                         {
-                            enriched.KeySkills = details.KeySkills.Select(ks => ks.Name).ToList();
+                            enriched.Description = details?.Description;
+                            enriched.KeySkills = details?.KeySkills?.Select(ks => ks.Name).ToList() ?? new List<string>();
                         }
+
                         enrichedVacancies.Add(enriched);
                     }, cancellationToken);
                     updater.Increment(HhApiConstants.ProgressIncrementPerItem);
@@ -192,6 +194,7 @@ namespace HHParser.Infrastructure.Services.Api
                 CacheConstants.ProfessionalRolesCacheKey,
                 async () => await GetDataAsObjectAsync<ProfessionalRolesResponse>(_professionalRolesUrl, cancellationToken),
                 CacheConstants.CacheDuration);
+
             return response?.Categories ?? new List<ProfessionalRolesCategory>();
         }
 
@@ -207,7 +210,7 @@ namespace HHParser.Infrastructure.Services.Api
                     throw new ApiRequestException($"Unsuccessful response from server: {response.StatusCode}");
                 }
                 var data = await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken).ConfigureAwait(false);
-                if (EqualityComparer<T>.Default.Equals(data, default(T)))
+                if (EqualityComparer<T>.Default.Equals(data, default))
                 {
                     throw new ApiRequestException("Empty response received from API");
                 }

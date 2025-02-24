@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using CsvHelper.Configuration;
+﻿using CsvHelper.Configuration;
 using HHParser.Domain.Models.Vacancies;
 
 namespace HHParser.Application.Services.Csv.Mappings
@@ -29,19 +24,22 @@ namespace HHParser.Application.Services.Csv.Mappings
             Map(v => v.Salary.Gross).Name("SalaryGross");
 
             // AreaInfo
-            Map(v => v.Area.Name).Name("AreaName");
+            Map(v => v.Area.Name).Name("Area");
 
             // EmployerInfo
-            Map(v => v.Employer.Name).Name("EmployerName");
+            Map(v => v.Employer.Name).Name("Employer");
 
             // ExperienceInfo
-            Map(v => v.Experience.Name).Name("ExperienceName");
+            Map(v => v.Experience.Name).Name("Experience");
 
             // EmploymentInfo
-            Map(v => v.Employment.Name).Name("EmploymentName");
+            Map(v => v.Employment.Name).Name("Employment");
 
             // ScheduleInfo
             Map(v => v.Schedule.Name).Name("ScheduleName");
+
+            Map(v => v.Description).Name("Description");
+
 
             // KeySkills — список строк
             Map(v => v.KeySkills)

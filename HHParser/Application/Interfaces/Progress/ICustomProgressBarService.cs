@@ -1,14 +1,18 @@
-﻿namespace HHParser.Application.Interfaces.Progress
+﻿using HHParser.Infrastructure.Configuration.Constants;
+
+namespace HHParser.Application.Interfaces.Progress
 {
+    /// <summary>
+    /// Provides functionality to start an asynchronous operation with a console progress bar updated in a single line.
+    /// </summary>
     public interface ICustomProgressBarService
     {
         /// <summary>
-        /// Запускает асинхронную операцию с отображением прогресс-бара, обновляемого в одной строке.
+        /// Starts an asynchronous operation with a progress bar.
         /// </summary>
-        /// <param name="description">Описание операции (будет выведено в начале строки).</param>
-        /// <param name="total">Общее количество шагов.</param>
-        /// <param name="action">Делегат, получающий объект для обновления прогресса.</param>
-        Task StartAsync(double total, Func<IProgressUpdater, Task> action, string description = "");
+        /// <param name="total">The total number of steps.</param>
+        /// <param name="action">A delegate that receives an object for updating progress.</param>
+        /// <param name="description">A description of the operation (displayed at the beginning of the line).</param>
+        Task StartAsync(double total, Func<IProgressUpdater, Task> action, string description = ProgressBarConstants.DefaultLoadingText);
     }
-
 }

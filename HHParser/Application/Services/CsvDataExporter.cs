@@ -7,8 +7,28 @@ using HHParser.Domain.Models.Vacancies;
 
 namespace HHParser.Application.Services
 {
+    /// <summary>
+    /// Provides functionality to export enriched vacancy data to a CSV file.
+    /// This class implements the <see cref="IDataExporter"/> interface.
+    /// </summary>
     public class CsvDataExporter : IDataExporter
     {
+        /// <summary>
+        /// Exports a collection of enriched vacancies to a CSV file.
+        /// </summary>
+        /// <param name="vacancies">The collection of vacancies to export.</param>
+        /// <param name="baseFileName">The base file name to use for the exported CSV file.</param>
+        /// <remarks>
+        /// The CSV file is saved in a "Reports" folder located in the application's base directory.
+        /// A timestamp is appended to the file name to ensure uniqueness.
+        /// The file is written using UTF-8 encoding, and a custom class map is registered
+        /// to properly map the properties of <see cref="EnrichedVacancy"/> to the CSV columns.
+        /// Example usage:
+        /// <code>
+        /// IDataExporter exporter = new CsvDataExporter();
+        /// exporter.ExportVacancies(vacancies, "VacanciesReport");
+        /// </code>
+        /// </remarks>
         public void ExportVacancies(IEnumerable<EnrichedVacancy> vacancies, string baseFileName)
         {
             try
@@ -27,13 +47,12 @@ namespace HHParser.Application.Services
                     csv.WriteRecords(vacancies);
                 }
 
-                Console.WriteLine($"Данные успешно сохранены в файл: {fullPath}");
+                Console.WriteLine($"Data successfully exported to file: {fullPath}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при сохранении в CSV: {ex.Message}");
+                Console.WriteLine($"Error exporting CSV: {ex.Message}");
             }
         }
     }
-
 }

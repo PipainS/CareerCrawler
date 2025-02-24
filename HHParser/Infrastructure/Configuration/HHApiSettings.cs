@@ -24,9 +24,18 @@
         /// </summary>
         public string ProfessionalRolesPath { get; set; } = string.Empty;
 
+        /// <summary>
+        /// The URL path for retrieving vacancies.
+        /// This path is appended to the base URL.
+        /// Example value: "vacancies"
+        /// </summary>
         public string VacanciesUrl { get; set; } = string.Empty;
 
+        /// <summary>
+        /// The template used for constructing the vacancy detail URL.
+        /// A placeholder {0} should be replaced with the vacancy ID.
+        /// Example value: "vacancies/{0}"
+        /// </summary>
         public string VacancyDetailTemplate { get; set; } = string.Empty;
-
     }
 }

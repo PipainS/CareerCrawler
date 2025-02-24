@@ -1,18 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace HHParser.Application.Interfaces.Progress
+﻿namespace HHParser.Application.Interfaces.Progress
 {
+    /// <summary>
+    /// Defines the method for updating progress.
+    /// </summary>
     public interface IProgressUpdater
     {
         /// <summary>
-        /// Увеличивает текущее значение прогресса.
+        /// Increments the current progress value.
         /// </summary>
-        /// <param name="amount">На сколько увеличить значение (обычно 1 за шаг).</param>
+        /// <param name="amount">The amount to increase the progress (typically 1 per step).</param>
         void Increment(double amount);
     }
-
 }

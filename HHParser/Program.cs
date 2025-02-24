@@ -45,11 +45,11 @@ services.Configure<HHApiSettings>(configuration.GetSection(ConfigurationKeys.HHA
 
 services.AddAutoMapper(typeof(MappingProfile));
 
-// Registering Presentation layer
-services.AddSingleton<IConsoleView, ConsoleView>();
-
 services.AddSingleton<ICustomProgressBarService, CustomProgressBarService>();
 services.AddSingleton<ICachingService, MemoryCachingService>();
+
+// Registering Presentation layer
+services.AddSingleton<IConsoleView, ConsoleView>();
 
 // Automated registration of menu commands
 services.Scan(scan => scan

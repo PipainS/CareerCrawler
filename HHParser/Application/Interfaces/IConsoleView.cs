@@ -27,9 +27,6 @@ namespace HHParser.Application.Interfaces
         /// <param name="categories">A list of professional roles categories to be displayed.</param>
         void ShowProfessionalRoles(List<ProfessionalRolesCategory> categories);
 
-        void ShowVacancies(List<VacancySummary> vacancies);
-
-
         /// <summary>
         /// Displays an error message to the user.
         /// </summary>
