@@ -37,5 +37,11 @@
         /// Example value: "vacancies/{0}"
         /// </summary>
         public string VacancyDetailTemplate { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The request must pass the User-Agent header. 
+        /// If no header has been sent, the response will be 400 Bad Request.
+        /// </summary>
+        public string UserAgent { get; set; } = string.Empty;
     }
 }

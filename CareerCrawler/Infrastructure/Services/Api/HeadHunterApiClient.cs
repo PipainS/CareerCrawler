@@ -60,7 +60,7 @@ namespace HHParser.Infrastructure.Services.Api
 
             if (!_client.DefaultRequestHeaders.Contains("User-Agent"))
             {
-                _client.DefaultRequestHeaders.Add("User-Agent", "HH-User-Agent");
+                _client.DefaultRequestHeaders.Add("User-Agent", settings.UserAgent);
             }
 
             _client.BaseAddress = new Uri(settings.BaseUrl);
