@@ -45,8 +45,8 @@ To run the project locally, follow these steps:
 
 ```bash
 # Clone repository
-git clone https://github.com/PipainS/HHParser.git
-cd HHParser/CareerCrawler
+git clone https://github.com/PipainS/CareerCrawler.git
+cd CareerCrawler/CareerCrawler
 
 # Restore packages
 dotnet restore
