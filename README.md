@@ -22,7 +22,7 @@
 
 **Key Features**:
 - 🎯 Professional role/specialization catalogs
-- 💾 Vacancy dataset generation (C# example: 5000+ entries)
+- 💾 Vacancy dataset generation (C# example: 2000 entries)
 - 📁 CSV export capabilities
 - 🔁 Resilient API communication with Polly retries
 
