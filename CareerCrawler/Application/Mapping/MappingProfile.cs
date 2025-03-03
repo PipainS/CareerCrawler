@@ -7,15 +7,7 @@ namespace HHParser.Application.Mapping
     {
         public MappingProfile()
         {
-            // Маппинг из VacancySummary в EnrichedVacancy
             CreateMap<VacancySummary, EnrichedVacancy>();
-
-            // Если потребуется объединить данные из VacancyDetail
-            //CreateMap<VacancyDetail, EnrichedVacancy>()
-            //    .ForMember(dest => dest.KeySkills,
-            //               opt => opt.MapFrom(src => src.KeySkills.Select(ks => ks.Name).ToList()))
-            //    .ForMember(dest => dest.Description,
-            //               opt => opt.MapFrom(src => src.Description));
         }
     }
 }
